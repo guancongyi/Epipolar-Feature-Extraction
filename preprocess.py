@@ -1,7 +1,7 @@
 import numpy as np
 import database
 
-def calculation(line):
+def parse(line):
     IMG_ID = int(line[0])
     # qw qx qy qz
     qw,qx,qy,qz = float(line[1]),float(line[2]),float(line[3]),float(line[4])
@@ -36,7 +36,7 @@ if __name__ == '__main__':
         line = line_.split(' ')
         count+=1
         if line[0] != '#' and count%2 != 0:
-            (img_name, R, T, XYZ )= calculation(line)
+            (img_name, R, T, XYZ )= parse(line)
             name = img_name[:-1]
             db.add_image(name,R,T,XYZ)
 
