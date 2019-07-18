@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     # read quaternion and translation matrix
     # store them in database
-    file = open('test/tianjin_E.txt')
+    file = open('test/jinghu_corner.txt')
     count = 0
     for line_ in file.readlines():
         line = line_.split(' ')

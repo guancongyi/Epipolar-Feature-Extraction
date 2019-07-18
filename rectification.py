@@ -13,41 +13,89 @@ class rectification():
         self.c1, self.c2, self.c3 = R[2, 0], R[2, 1], R[2, 2]
 
     def getEpipolarImage(self, src):
-        r, c = dst.shape[:2]
-        cr, cc = r / 2, c / 2
-        for i in range(0, r):
-            for j in range(0, c):
-                u, v = pixToDist((cr, cc), (i, j), (self.cx, self.cy), self.miu)
+        r, c = src.shape[:2]
+        r_dst, c_dst = self.getResultImgSize((r,c))
+        dst = np.zeros((r_dst, c_dst, 3), np.uint8)
+        # resample
+        for i in range(int(r_dst/8)-100, int(r_dst/8)+100):
+            for j in range(int(c_dst/8)-100, int(c_dst/8)+100):
+                # physical distance
+                du, dv = self.pixToDist((r_dst/2, c_dst/2), (i, j), (0,0))
+                dx, dy = self.uvToXy(du, dv)
+                x, y = self.distToPix((r,c),(dx,dy),(self.cx,self.cy))
+                if (x >= 0 and y >= 0) and (x < r and x < c):
+                    print(i)
+                    dst[i, j, 1] = src[x, y, 1]
+                    dst[i, j, 2] = src[x, y, 2]
+                    dst[i, j, 3] = src[x, y, 3]
 
+
+        return dst
+
+
+
+    # estimate the result image size by
+    # estimating the original image's
+    # left up corner and bottom right corner.
     def getResultImgSize(self, size):
         r, c = size
-        c1x, c1y = pixToDist((r / 2, c / 2), (0, 0), (self.cx, self.cy), self.miu)
-        c2x, c2y = pixToDist((r / 2, c / 2), (r, c), (self.cx, self.cy), self.miu)
+        x1, y1 = self.pixToDist((r / 2, c / 2), (0, 0), (self.cx, self.cy))
+        x2, y2 = self.pixToDist((r / 2, c / 2), (r, c), (self.cx, self.cy))
+        x3, y3 = self.pixToDist((r / 2, c / 2), (0, c), (self.cx, self.cy))
+        x4, y4 = self.pixToDist((r / 2, c / 2), (r, 0), (self.cx, self.cy))
+
         # top left
-        return (r, c)
+        u1, v1 = self.xyToUv(x1, y1)
+        # bottom right
+        u2, v2 = self.xyToUv(x2, y2)
+        u3, v3 = self.xyToUv(x3, y3)
+        u4, v4 = self.xyToUv(x4, y4)
 
-    def slantToParallel(self, x, y, u, v):
-        x = int((-self.f * (self.a1 * u + self.b1 * v - self.c1 * self.f)) / (self.a3 * u + self.b3 * v + self.c3 * self.f))
-        y = int((-self.f * (self.a2 * u + self.b2 * v - self.c2 * self.f)) / (self.a3 * u + self.b3 * v + self.c3 * self.f))
+        us = [abs(u1), abs(u2), abs(u3), abs(u4)]
+        vs = [abs(v1), abs(v2), abs(v3), abs(v4)]
 
-    def pixToDist(self, center, xy):
+        u = int((max(us)-min(us))/self.miu)
+        v = int((max(vs)-min(vs))/self.miu)
+
+        return (u, v)
+
+    # function that convert u,v in parallel coordinate system to xy
+    # in orginal coordinate system based on extrinsic parameters.
+    def uvToXy(self, u, v):
+        x = -self.f * (self.a1 * u + self.b1 * v - self.c1 * self.f) / (self.a3 * u + self.b3 * v - self.c3 * self.f)
+        y = -self.f * (self.a2 * u + self.b2 * v - self.c2 * self.f) / (self.a3 * u + self.b3 * v - self.c3 * self.f)
+        return (x,y)
+
+    # On the other hand
+    def xyToUv(self, x, y):
+        A = np.array([[self.a3*x+self.a1*self.f, self.b3*x+self.b1*self.f],
+                      [self.a3*y+self.a2*self.f, self.b3*y+self.b2*self.f]])
+        b = np.array([[self.c1*self.f*self.f+self.c3*x*self.f],
+                      [self.c2*self.f*self.f+self.c3*y*self.f]])
+
+        Ainv = np.linalg.inv(A)
+        reslt = np.dot(Ainv,b)
+        return (reslt[0,0],reslt[1,0])
+
+    # Convert pixel distance to physical distance on CCD
+    def pixToDist(self, center, xy, cxy):
         mx, my = center
         x, y = xy
-        return ((mx - x) * self.miu + self.cx, (my - y) * self.miu + self.cy)
+        cx, cy = cxy
+        return ((mx - x) * self.miu + cx, (my - y) * self.miu + cy)
 
-
-
-
-
-
-
-
+    # On the other hand
+    def distToPix(self, center, dxy, cxy):
+        dx, dy = dxy
+        mx, my = center
+        cx, cy = cxy
+        return ( int(mx-((dx-cx)/self.miu)),int(my-((dy-cy)/self.miu)) )
 
 
 if __name__ == '__main__':
     # get extrinsic from database
-    im1 = 'E_00025_23725.jpg'
-    im2 = 'E_00026_23726.jpg'
+    im1 = 'E00224_40814-thred.jpg'
+    im2 = 'E02814_43404-thred.jpg'
 
     db = database.DB('extrinsic.db')
     (R1, T1, XYZ1) = db.get_RT(im1)
@@ -55,57 +103,18 @@ if __name__ == '__main__':
     cx1 = -0.07302
     cy1 = -0.009029
     miu1 = 0.0046
-    f1 = 41.9401
+    f1 = 40
 
     # find epipolar image by using epipolar rectification
     path1 = 'test/' + im1
     # path2 = 'test/' + im2
     img1 = cv2.imread(path1)
-    # img2 = cv2.imread(path2)
 
-    # estimate the result image size by
-    # estimating the original image's
-    # left up corner and bottom right corner.
-    (r,c) = getResultImgSize(img1,cx1,cy1,miu1)
-    dst = np.zeros((r,c,3), np.uint8)
-    getEpipolarImage(img1,dst,R1,f1,cx1,cy1,miu1)
+    obj1 = rectification(cx1,cy1,f1,R1,miu1)
+    ret1 = obj1.getEpipolarImage(img1)
 
-
-
-'''
-# using opencv to do recitification
-# by giving camera's intrinsic parameter,
-# extrinsic parameters, and so on.
-path1 = 'test/' + im1
-path2 = 'test/' + im2
-
-# cam E1:
-fx2 = 41.94 # mm
-fy2 = 41.94
-cx2 = -0.07302
-cy2 = -0.009029
-
-cam1 = np.array([[fx2,0,cx2],
-                 [0,fy2,cy2],
-                 [0,0,0]])
-
-# cam E2
-cam2 = cam1
-
-img1 = cv2.imread(path1)
-img2 = cv2.imread(path2)
-
-
-# outputs
-OP1 = np.zeros((3,4))
-OP2 = np.zeros((3,4))
-OR1 = np.zeros((3,3))
-OR2 = np.zeros((3,3))
-Q = np.zeros((4,4))
-
-cv2.stereoRectify(cam1,None,cam2,None,img1.shape,)
-'''
-
+    cv2.imwrite('result.jpg', ret1)
+    print('done')
 
 
 
