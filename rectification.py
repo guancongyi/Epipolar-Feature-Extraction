@@ -14,23 +14,22 @@ class rectification():
 
     def getEpipolarImage(self, src):
         r, c = src.shape[:2]
-        r_dst, c_dst = self.getResultImgSize((r,c))
+        (r_dst, c_dst),(cu, cv) = self.getResultImgSize((r,c))
         dst = np.zeros((r_dst, c_dst, 3), np.uint8)
         # resample
-        for i in range(int(r_dst/8)-100, int(r_dst/8)+100):
-            for j in range(int(c_dst/8)-100, int(c_dst/8)+100):
-                # physical distance
-                du, dv = self.pixToDist((r_dst/2, c_dst/2), (i, j), (0,0))
-                dx, dy = self.uvToXy(du, dv)
+        for i in range(1000, 1500):
+            for j in range(1000, 1500):
+                (du, dv) = self.pixToDist((r_dst/2, c_dst/2), (i, j), (cu,cv))
+                (dx, dy) = self.uvToXy(du, dv)
                 x, y = self.distToPix((r,c),(dx,dy),(self.cx,self.cy))
-                if (x >= 0 and y >= 0) and (x < r and x < c):
+                if (x >= 0 and y >= 0) and (x < r and y < c):
                     print(i)
+                    dst[i, j, 0] = src[x, y, 0]
                     dst[i, j, 1] = src[x, y, 1]
                     dst[i, j, 2] = src[x, y, 2]
-                    dst[i, j, 3] = src[x, y, 3]
-
 
         return dst
+
 
 
 
@@ -51,13 +50,37 @@ class rectification():
         u3, v3 = self.xyToUv(x3, y3)
         u4, v4 = self.xyToUv(x4, y4)
 
-        us = [abs(u1), abs(u2), abs(u3), abs(u4)]
-        vs = [abs(v1), abs(v2), abs(v3), abs(v4)]
 
-        u = int((max(us)-min(us))/self.miu)
-        v = int((max(vs)-min(vs))/self.miu)
+        # test
+        # xx,yy = self.uvToXy(u2,v2)
+        # xc,yc = self.distToPix((r/2, c/2),(xx,yy),(self.cx,self.cy))
 
-        return (u, v)
+        # Given four points, find the maximum rectangle.
+        # And calculate the center.
+        us = [u1, u2, u3, u4]
+        vs = [v1, v2, v3, v4]
+
+        du = max(us)-min(us)
+        dv = max(vs)-min(vs)
+
+        cu = min(us)+du/2;
+        cv = min(vs)+dv/2;
+
+        # Base on du dv, calculate the size of the desire output
+        u = int(du/self.miu)
+        v = int(dv/self.miu)
+
+
+
+        # test
+        # for i in range(10000,15000):
+        #     du, dv = self.pixToDist((u / 2, v / 2), (i, i), (cu, cv))
+        #     dx, dy = self.uvToXy(du, dv)
+        #     xc, yc = self.distToPix((r / 2, c / 2), (dx, dy), (self.cx, self.cy))
+        #     print(xc," ",yc)
+
+
+        return (u, v), (cu, cv)
 
     # function that convert u,v in parallel coordinate system to xy
     # in orginal coordinate system based on extrinsic parameters.
@@ -77,7 +100,7 @@ class rectification():
         reslt = np.dot(Ainv,b)
         return (reslt[0,0],reslt[1,0])
 
-    # Convert pixel distance to physical distance on CCD
+    # Convert pixel coordinate to physical distance coordinates on CCD
     def pixToDist(self, center, xy, cxy):
         mx, my = center
         x, y = xy
