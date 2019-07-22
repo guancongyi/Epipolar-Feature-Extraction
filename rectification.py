@@ -1,5 +1,6 @@
 import numpy as np
 import database
+import math
 import cv2
 
 class rectification():
@@ -17,11 +18,11 @@ class rectification():
         (r_dst, c_dst),(cu, cv) = self.getResultImgSize((r,c))
         dst = np.zeros((r_dst, c_dst, 3), np.uint8)
         # resample
-        for i in range(1000, 1500):
-            for j in range(1000, 1500):
+        for i in range(0, 500):
+            for j in range(0, 500):
                 (du, dv) = self.pixToDist((r_dst/2, c_dst/2), (i, j), (cu,cv))
-                (dx, dy) = self.uvToXy(du, dv)
-                x, y = self.distToPix((r,c),(dx,dy),(self.cx,self.cy))
+                # (dx, dy) = self.uvToXy(du, dv)
+                x, y = self.distToPix((r,c),(du,dv),(self.cx,self.cy))
                 if (x >= 0 and y >= 0) and (x < r and y < c):
                     print(i)
                     dst[i, j, 0] = src[x, y, 0]
@@ -42,6 +43,7 @@ class rectification():
         x2, y2 = self.pixToDist((r / 2, c / 2), (r, c), (self.cx, self.cy))
         x3, y3 = self.pixToDist((r / 2, c / 2), (0, c), (self.cx, self.cy))
         x4, y4 = self.pixToDist((r / 2, c / 2), (r, 0), (self.cx, self.cy))
+        x5, y5 = self.pixToDist((r / 2, c / 2), (r/2, c/2), (self.cx, self.cy))
 
         # top left
         u1, v1 = self.xyToUv(x1, y1)
@@ -49,10 +51,14 @@ class rectification():
         u2, v2 = self.xyToUv(x2, y2)
         u3, v3 = self.xyToUv(x3, y3)
         u4, v4 = self.xyToUv(x4, y4)
-
+        u5, v5 = self.xyToUv(x5, y5)
 
         # test
-        # xx,yy = self.uvToXy(u2,v2)
+        # w = math.atan2(self.c2,self.c3)
+        # a = math.atan2(-self.c1, math.sqrt(math.pow(self.c2,2)+math.pow(self.c3,2)))
+        # k = math.atan2(self.b1, self.a1)
+        # print(math.degrees(w),math.degrees(a),math.degrees(k))
+        # xx,yy = self.uvToXy(u4,v4)
         # xc,yc = self.distToPix((r/2, c/2),(xx,yy),(self.cx,self.cy))
 
         # Given four points, find the maximum rectangle.
@@ -80,7 +86,7 @@ class rectification():
         #     print(xc," ",yc)
 
 
-        return (u, v), (cu, cv)
+        return (r, c), (self.cx, self.cy)
 
     # function that convert u,v in parallel coordinate system to xy
     # in orginal coordinate system based on extrinsic parameters.
@@ -127,6 +133,8 @@ if __name__ == '__main__':
     cy1 = -0.009029
     miu1 = 0.0046
     f1 = 40
+
+
 
     # find epipolar image by using epipolar rectification
     path1 = 'test/' + im1
