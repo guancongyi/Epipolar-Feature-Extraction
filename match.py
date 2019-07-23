@@ -14,15 +14,15 @@ class Match:
         img2 = self.im2
         for pt1,pt2 in zip(pts1,pts2):
             color = tuple(np.random.randint(0,255,3).tolist())
-            img1 = cv2.circle(img1,tuple(pt1),15,color,-1)
-            img2 = cv2.circle(img2,tuple(pt2),15,color,-1)
+            img1 = cv2.circle(img1,tuple(pt1),90,color,-1)
+            img2 = cv2.circle(img2,tuple(pt2),90,color,-1)
 
 
-        img1 = cv2.resize(img1,(600,600),interpolation=cv2.INTER_CUBIC)
-        img2 = cv2.resize(img2,(600,600),interpolation=cv2.INTER_CUBIC)
-        cv2.imshow('1', img1)
-        cv2.imshow('2', img2)
-        cv2.waitKey(0)
+        # img1 = cv2.resize(img1,(600,600),interpolation=cv2.INTER_CUBIC)
+        # img2 = cv2.resize(img2,(600,600),interpolation=cv2.INTER_CUBIC)
+        # cv2.imshow('1', img1)
+        # cv2.imshow('2', img2)
+        # cv2.waitKey(0)
 
     def extract(self):
 
@@ -59,15 +59,19 @@ class Match:
         pts1 = pts1[mask.ravel()==1]
         pts2 = pts2[mask.ravel()==1]
 
-        draw_params = dict(matchColor=(0, 255, 0),
-                           singlePointColor=(255, 0, 0),
-                           matchesMask=mask,
-                           flags=0)
-        #img3 = cv2.drawMatches(self.im1, kp1, self.im2, kp2, good[:10], None, flags=2)
-        #cv2.imshow('3', img3)
-        #cv2.waitKey(0)
+        img3 = cv2.drawMatches(self.im1, kp1, self.im2, kp2, good[:10], None, flags=2)
+        cv2.imshow('3', img3)
+        cv2.waitKey(0)
+        return pts1, pts2, img3
 
-        return pts1, pts2
+
+if __name__ == '__main__':
+    im1 = 'result.jpg' #7230*6742
+    im2 = 'result3.jpg' #7222*6738
+    m = Match(im1, im2)
+    pts1, pts2, img3 = m.extract()
+    cv2.imwrite('match.jpg', img3)
+
 
 
 
