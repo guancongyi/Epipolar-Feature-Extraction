@@ -37,7 +37,7 @@ class DB():
                       [row[10], row[11], row[12]]])
         Euler = np.array([row[16], row[17], row[18]])
         XYZ = np.array([row[13], row[14], row[15]])
-        return (R,Euler,XYZ)
+        return (cx, cy, f, R, Euler, XYZ)
 
     def close(self):
         self.conn.close()

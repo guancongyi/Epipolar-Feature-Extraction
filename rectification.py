@@ -9,7 +9,6 @@ class rectification():
         self.cx = cx
         self.cy = cy
         self.miu = miu
-        # 1
         self.a1, self.a2, self.a3 = R[0, 0], R[0, 1], R[0, 2]
         self.b1, self.b2, self.b3 = R[1, 0], R[1, 1], R[1, 2]
         self.c1, self.c2, self.c3 = R[2, 0], R[2, 1], R[2, 2]
@@ -28,9 +27,8 @@ class rectification():
                 x, y = self.distToPix((r/2, c/2),(dx,dy),(self.cx,self.cy))
                 if (x >= 0 and y >= 0) and (x < r and y < c):
                     # print(i)
-                    dst[i, j, 0] = src[x, y, 0]
-                    dst[i, j, 1] = src[x, y, 1]
-                    dst[i, j, 2] = src[x, y, 2]
+                    dst[i, j] = src[x, y, :]
+
         return dst
 
 
@@ -45,7 +43,7 @@ class rectification():
         x3, y3 = self.pixToDist((r / 2, c / 2), (0, c), (self.cx, self.cy))
         x4, y4 = self.pixToDist((r / 2, c / 2), (r, 0), (self.cx, self.cy))
 
-        # top left , bottom right, and so on
+        # top left , bottom right, and ...
         u1, v1 = self.xyToUv(x1, y1)
         u2, v2 = self.xyToUv(x2, y2)
         u3, v3 = self.xyToUv(x3, y3)
@@ -53,13 +51,13 @@ class rectification():
 
         ######test
         # test euler angles
-        phi = math.asin(self.a3)
-        kappa = math.asin(-self.a2/math.cos(phi))
-        omega = math.asin(-self.b3/math.cos(phi))
-        print(math.degrees(phi),math.degrees(kappa),math.degrees(omega))
-        # test convert back
-        xx,yy = self.uvToXy(u4,v4)
-        xc,yc = self.distToPix((r/2, c/2),(xx,yy),(self.cx,self.cy))
+        # phi = math.asin(self.a3)
+        # kappa = math.asin(-self.a2/math.cos(phi))
+        # omega = math.asin(-self.b3/math.cos(phi))
+        # print(math.degrees(phi),math.degrees(kappa),math.degrees(omega))
+        # # test convert back
+        # xx,yy = self.uvToXy(u4,v4)
+        # xc,yc = self.distToPix((r/2, c/2),(xx,yy),(self.cx,self.cy))
         ######test
 
         # Given four points, find the maximum rectangle.
@@ -111,28 +109,26 @@ class rectification():
 if __name__ == '__main__':
     # get extrinsic from database
     im1 = 'E00224_40814-thred.jpg'
-    im2 = 'E02814_43404-thred.jpg'
-    im3 = 'E00223_40813-thred.jpg'
+    im2 = 'E00223_40813-thred.jpg'
 
-    # db = database.DB('extrinsic.db')
-    # (R1, T1, XYZ1) = db.get_RT(im1)
-    # (R2, T2, XYZ2) = db.get_RT(im2)
-    cx1 = -0.05848851875596568217
-    cy1 = -0.15072189195079516155
+    db = database.DB('extrinsic.db')
+    (cx1, cy1, f1, R1, Euler1, XYZ1) = db.getInfo(im2)
+    #(cx2, cy2, f2, R2, Euler2, XYZ2) = db.getInfo(im2)
+
     miu1 = 0.0046
-    f1 = 42.64141405461381850728
+    miu2 = 0.0046
 
 
 
     # find epipolar image by using epipolar rectification
     path1 = 'test/' + im1
-    # path2 = 'test/' + im2
+    path2 = 'test/' + im2
     img1 = cv2.imread(path1)
 
-    obj1 = rectification(cx1,cy1,f1,None,miu1)
+    obj1 = rectification(cx1,cy1,f1,R1,miu1)
     ret1 = obj1.getEpipolarImage(img1)
 
-    # cv2.imwrite('result3.jpg', ret1)
+    cv2.imwrite('result4.jpg', ret1)
     print('done')
 
 
