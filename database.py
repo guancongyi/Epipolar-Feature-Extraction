@@ -18,13 +18,13 @@ class DB():
         cmd = 'CREATE TABLE ' + name + ' (' + s + ')'
         self.cursor.execute(cmd)
 
-    def add_image(self, name, cx, cy, f, R=np.zeros((3,3)), XYZ=np.zeros(3), Euler=np.zeros(3)):
+    def add_image(self, name, cx, cy, f, R=np.zeros((3,3)), XYZ=np.zeros(3), Euler=np.zeros(3), miu=0.0046):
         self.cursor.execute(
-            "INSERT INTO images VALUES (?,?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?)",
+            "INSERT INTO images VALUES (?,?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?,?)",
             (name, cx, cy, f, R[0,0], R[0,1], R[0,2],
                     R[1,0], R[1,1], R[1,2],
                     R[2,0], R[2,1], R[2,2],
-                    XYZ[0], XYZ[1], XYZ[2], Euler[0], Euler[1], Euler[2]))
+                    XYZ[0], XYZ[1], XYZ[2], Euler[0], Euler[1], Euler[2], miu))
 
         self.conn.commit()
 
@@ -37,7 +37,8 @@ class DB():
                       [row[10], row[11], row[12]]])
         Euler = np.array([row[16], row[17], row[18]])
         XYZ = np.array([row[13], row[14], row[15]])
-        return (cx, cy, f, R, Euler, XYZ)
+        miu = row[19]
+        return cx, cy, f, R, Euler, XYZ, miu
 
     def close(self):
         self.conn.close()

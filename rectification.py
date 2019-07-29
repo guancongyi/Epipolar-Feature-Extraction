@@ -2,6 +2,7 @@ import numpy as np
 import database
 import math
 import cv2
+import os
 
 class rectification():
     def __init__(self, cx, cy, f, R, miu):
@@ -107,31 +108,24 @@ class rectification():
 
 
 if __name__ == '__main__':
-    # get extrinsic from database
-    im1 = 'E00224_40814-thred.jpg'
-    im2 = 'E00223_40813-thred.jpg'
 
     db = database.DB('extrinsic.db')
-    (cx1, cy1, f1, R1, Euler1, XYZ1) = db.getInfo(im2)
-    #(cx2, cy2, f2, R2, Euler2, XYZ2) = db.getInfo(im2)
+    # get extrinsic from database
+    for name in os.listdir("./data"):
+        imgList = os.listdir("./out")
+        if name not in imgList:
+            cx, cy, f, R, XYZ, _, miu = db.getInfo(name)
+            # find epipolar image by using epipolar rectification
+            path = 'data/' + name
+            out_path = 'out/' + name
+            img = cv2.imread(path)
+            obj = rectification(cx, cy, f, R, miu)
+            ret = obj.getEpipolarImage(img)
 
-    miu1 = 0.0046
-    miu2 = 0.0046
-
-
-
-    # find epipolar image by using epipolar rectification
-    path1 = 'test/' + im1
-    path2 = 'test/' + im2
-    img1 = cv2.imread(path1)
-
-    obj1 = rectification(cx1,cy1,f1,R1,miu1)
-    ret1 = obj1.getEpipolarImage(img1)
-
-    cv2.imwrite('result4.jpg', ret1)
-    print('done')
-
-
+            cv2.imwrite(out_path, ret)
+            print('Finish processing ' + name)
+        else:
+            print('Already processed ' + name)
 
 
 

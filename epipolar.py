@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 import time
+import database
+import os
 
 
 class EpipolarMatching:
@@ -13,7 +15,7 @@ class EpipolarMatching:
         self.des2 = []
         self.matches = []
         self.goodMatches = []
-        self.error = 30
+        self.error = 100
 
 
     def drawPts(self):
@@ -61,6 +63,7 @@ class EpipolarMatching:
         # matches = flann.knnMatch(self.des1, self.des2, k=2)
         bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
         self.matches = bf.match(self.des1, self.des2)
+        self.drawMatches(self.matches)
 
     def EpipolarMatch(self):
         # Every keypoint in image 1,its correspondent in image 2
@@ -76,42 +79,50 @@ class EpipolarMatching:
                 sum += error
                 self.goodMatches.append(match)
 
-
-        self.printMatches(self.goodMatches,self.pts1,self.pts2)
-        self.drawMatches(self.goodMatches)
+        # self.printMatches(self.goodMatches,self.pts1,self.pts2)
+        # self.drawMatches(self.goodMatches)
         print("error " , sum/count)
 
     def printMatches(self, matches, pts1, pts2):
         for match in matches:
             print(pts1[match.queryIdx].pt, pts2[match.trainIdx].pt)
 
+    def getInfo(self):
+        return self.goodMatches, self.pts1, self.pts2
 
-
-
-
-
+def getGeoLocation(im, matches, pts1, pts2):
+    cx, cy, f, R, XYZs, _, miu = db.getInfo(im)
+    for match in matches:
+        pass
 
 
 if __name__ == '__main__':
-    im1 = 'result0.jpg'  # 7230*6742
-    im2 = 'result4.jpg' # 7222*6738
-    # im1 = 'test/E00224_40814-thred.jpg'
-    # im2 = 'test/E00223_40813-thred.jpg'
-    m = EpipolarMatching(im1, im2)
-    start = time.time()
-    m.extract()
-    end1 = time.time()
-    print(end1 - start)
+    db = database.DB('extrinsic.db')
 
-    m.BFmatch()
-    end2 = time.time()
-    print(end2 - end1)
+    imgList = os.listdir("./out")
+    i = 0
+    while i < len(imgList)-1:
+        im1 = 'out/'+imgList[i]
+        im2 = 'out/'+imgList[i+1]
+        i += 2
 
-    m.EpipolarMatch()
-    end3 = time.time()
-    print(end3 - end2)
+        print("Start extracting and matching...")
+        m = EpipolarMatching(im1, im2)
+        m.extract()
+        m.BFmatch()
+
+        s = time.time()
+        m.EpipolarMatch()
+        matches, pts1, pts2 = m.getInfo()
+        e = time.time()
+        print(e - s)
+        print("Finish matching")
+
+        print("Calculate matches...")
+        #getGeoLocation(im1, matches, pts1, pts2)
 
     print("done")
+
 
 
 
