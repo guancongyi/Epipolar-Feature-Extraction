@@ -130,10 +130,10 @@ if __name__ == '__main__':
         m.drawMatches(out, out_good)
 
 
-        # print("Calculate matches...")
+        print("Calculate matches...")
 
-        # space = spaceIntersection(db,im1,im2)
-        # space.getGeoLocation(matches, pts1, pts2)
+        space = spaceIntersection.spaceIntersect(db,im1,im2)
+        space.getGeoLocation(matches, pts1, pts2)
 
     print("done")
 

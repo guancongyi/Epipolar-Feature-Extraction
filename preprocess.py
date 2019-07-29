@@ -24,10 +24,10 @@ def eulerAnglesToRotationMatrix(theta):
 
     return R
 
-def parse(line):
+def parse(line, pos):
     IMG_ID = line[0]
     # XYZ
-    X,Y,Z = float(line[1]),float(line[2]),float(line[3])
+    X,Y,Z = float(pos[1]),float(pos[2]),float(pos[3])
     omega,phi,kappa = math.radians(float(line[4])),math.radians(float(line[5])),math.radians(float(line[6]))
     theta = (omega,phi,kappa)
     R = eulerAnglesToRotationMatrix(theta)
@@ -46,6 +46,7 @@ if __name__ == '__main__':
 
     # Read in intrinsic and extrinsic parameters
     external = open('pix4d/test_calibrated_external_camera_parameters_wgs84.txt')
+    POS = open('pix4d/test_calibrated_images_position.txt')
 
     '''Change ME'''
     ''''''''''''''''''
@@ -55,16 +56,15 @@ if __name__ == '__main__':
     f = 42.64141405461381850728
     miu = 0.0046
 
-    # read extrinsic
-    count = 1
-    for line_ in external.readlines():
+    # read extrinsic and pos
+
+    angles_ = external.readlines()
+    angles = angles_[1::]
+    for line_, pos_ in zip(angles, POS.readlines()):
         line = line_.split(' ')
-        if count == 1:
-            count = 0
-            continue
-        else:
-            (img_name, R, XYZ, euler) = parse(line)
-            db.add_image(img_name, cx , cy, f, R , euler, XYZ, miu)
+        pos = pos_.split(',')
+        img_name, R, XYZ, euler = parse(line, pos)
+        db.add_image(img_name, cx , cy, f, R , euler, XYZ, miu)
 
 
     db.close()
