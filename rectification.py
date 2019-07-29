@@ -111,9 +111,10 @@ if __name__ == '__main__':
 
     db = database.DB('extrinsic.db')
     # get extrinsic from database
+    imgList = os.listdir("./out")
     for name in os.listdir("./data"):
-        imgList = os.listdir("./out")
         if name not in imgList:
+            print('Start processing ' + name + '...')
             cx, cy, f, R, XYZ, _, miu = db.getInfo(name)
             # find epipolar image by using epipolar rectification
             path = 'data/' + name
@@ -126,8 +127,3 @@ if __name__ == '__main__':
             print('Finish processing ' + name)
         else:
             print('Already processed ' + name)
-
-
-
-
-

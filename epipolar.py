@@ -3,6 +3,8 @@ import numpy as np
 import time
 import database
 import os
+import spaceIntersection
+import statistics
 
 
 class EpipolarMatching:
@@ -15,7 +17,7 @@ class EpipolarMatching:
         self.des2 = []
         self.matches = []
         self.goodMatches = []
-        self.error = 100
+        self.th = 30
 
 
     def drawPts(self):
@@ -37,63 +39,69 @@ class EpipolarMatching:
         cv2.imshow('2', img2)
         cv2.waitKey(0)
 
-    def drawMatches(self, matches):
+    def drawMatches(self, path, path_good):
         # matches = sorted(self.matches, key=lambda x: x.distance)
         draw_params = dict(matchColor=(0, 255, 0),singlePointColor = (255, 0, 0),flags=0)
-        img3 = cv2.drawMatches(self.im1, self.pts1, self.im2, self.pts2, matches, None, flags=0)
+        img3 = cv2.drawMatches(self.im1, self.pts1, self.im2, self.pts2, self.matches, None, flags=0)
+        img4 = cv2.drawMatches(self.im1, self.pts1, self.im2, self.pts2, self.goodMatches, None, flags=0)
         # img3 = cv2.resize(img3, (1400, 1300), interpolation=cv2.INTER_CUBIC)
-        cv2.imwrite('3.jpg', img3)
-
-
+        cv2.imwrite(path, img3)
+        cv2.imwrite(path_good, img4)
 
     def extract(self):
         # Initiate FAST detector
-        orb1 = cv2.ORB_create()
-        orb2 = cv2.ORB_create()
+        # surf1 = cv2.xfeatures2d.SURF_create()
+        # self.pts1, self.des1 = surf1.detectAndCompute(self.im1,None)
+        # surf2 = cv2.xfeatures2d.SURF_create()
+        # self.pts2, self.des2 = surf2.detectAndCompute(self.im2,None)
+        orb1 = cv2.ORB_create(3000)
+        orb2 = cv2.ORB_create(3000)
         pts1 = orb1.detect(self.im1, None)
         pts2 = orb2.detect(self.im2, None)
-        self.pts1, self.des1 = orb1.compute(self.im1, pts1)
-        self.pts2, self.des2 = orb2.compute(self.im2, pts2)
+        self.pts1, self.des1 = orb1.compute(cv2.cvtColor(self.im1,cv2.COLOR_BGR2GRAY), pts1)
+        self.pts2, self.des2 = orb2.compute(cv2.cvtColor(self.im2,cv2.COLOR_BGR2GRAY), pts2)
 
     def BFmatch(self):
-        # FLANN_INDEX_KDTREE = 0
-        # index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-        # search_params = dict(checks=50)  # or pass empty dictionary
-        # flann = cv2.FlannBasedMatcher(index_params, search_params)
-        # matches = flann.knnMatch(self.des1, self.des2, k=2)
         bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-        self.matches = bf.match(self.des1, self.des2)
-        self.drawMatches(self.matches)
+        temp = bf.match(self.des1, self.des2)
+        for match in temp:
+            # if match.distance < 64:
+            self.matches.append(match)
 
     def EpipolarMatch(self):
         # Every keypoint in image 1,its correspondent in image 2
         # should be on the same line as the one in image 1.
-        count = 0
-        sum = 0
+        error = []
+
         for match in self.matches:
             x1, y1 = self.pts1[match.queryIdx].pt
             x2, y2 = self.pts2[match.trainIdx].pt
-            error = abs(y2 - y1)
-            if error <= self.error:
-                count += 1
-                sum += error
-                self.goodMatches.append(match)
+            error.append(y2 - y1)
 
-        # self.printMatches(self.goodMatches,self.pts1,self.pts2)
-        # self.drawMatches(self.goodMatches)
-        print("error " , sum/count)
+
+        med = statistics.median(error)
+
+        sum = 0
+        count = 0
+        for match in self.matches:
+            x1, y1 = self.pts1[match.queryIdx].pt
+            x2, y2 = self.pts2[match.trainIdx].pt
+            if abs(y2-y1-med) < self.th:
+                sum += abs(y2-y1)
+                self.goodMatches.append(match)
+                count += 1
+
+        print(sum/count)
+        # self.printMatches(self.matches,self.pts1,self.pts2)
+
 
     def printMatches(self, matches, pts1, pts2):
         for match in matches:
-            print(pts1[match.queryIdx].pt, pts2[match.trainIdx].pt)
+            print(pts1[match.queryIdx].pt, pts2[match.trainIdx].pt, pts2[match.trainIdx].pt[1]-pts1[match.queryIdx].pt[1] )
 
     def getInfo(self):
         return self.goodMatches, self.pts1, self.pts2
 
-def getGeoLocation(im, matches, pts1, pts2):
-    cx, cy, f, R, XYZs, _, miu = db.getInfo(im)
-    for match in matches:
-        pass
 
 
 if __name__ == '__main__':
@@ -104,6 +112,8 @@ if __name__ == '__main__':
     while i < len(imgList)-1:
         im1 = 'out/'+imgList[i]
         im2 = 'out/'+imgList[i+1]
+        out = './matches/' + str(i) + '.jpg'
+        out_good = './good_matches/' + str(i) + '.jpg'
         i += 2
 
         print("Start extracting and matching...")
@@ -115,11 +125,15 @@ if __name__ == '__main__':
         m.EpipolarMatch()
         matches, pts1, pts2 = m.getInfo()
         e = time.time()
-        print(e - s)
+        print('time elapased: ', e - s)
         print("Finish matching")
+        m.drawMatches(out, out_good)
 
-        print("Calculate matches...")
-        #getGeoLocation(im1, matches, pts1, pts2)
+
+        # print("Calculate matches...")
+
+        # space = spaceIntersection(db,im1,im2)
+        # space.getGeoLocation(matches, pts1, pts2)
 
     print("done")
 
