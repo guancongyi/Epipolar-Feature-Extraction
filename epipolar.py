@@ -99,13 +99,14 @@ class EpipolarMatching:
         for match in matches:
             print(pts1[match.queryIdx].pt, pts2[match.trainIdx].pt, pts2[match.trainIdx].pt[1]-pts1[match.queryIdx].pt[1] )
 
-    def getInfo(self):
-        return self.goodMatches, self.pts1, self.pts2
+    def getMatches(self):
+        return self.goodMatches, self.pts1, self.pts2, self.des1, self.des2
 
 
 
 if __name__ == '__main__':
     db = database.DB('extrinsic.db')
+    db.create_table('matches', ['points1x', 'points1y', 'points2x', 'points2y', 'des1', 'des2', 'X', 'Y', 'Z', 'img1Name', 'img2Name'])
 
     imgList = os.listdir("./out")
     i = 0
@@ -114,28 +115,27 @@ if __name__ == '__main__':
         im2 = 'out/'+imgList[i+1]
         out = './matches/' + str(i) + '.jpg'
         out_good = './good_matches/' + str(i) + '.jpg'
-        i += 2
 
+        i += 2
         print("Start extracting and matching...")
         m = EpipolarMatching(im1, im2)
         m.extract()
         m.BFmatch()
 
-        s = time.time()
         m.EpipolarMatch()
-        matches, pts1, pts2 = m.getInfo()
-        e = time.time()
-        print('time elapased: ', e - s)
-        print("Finish matching")
-        m.drawMatches(out, out_good)
+        matches, pts1, pts2, des1, des2 = m.getMatches()
 
+        print("Finish matching")
+        # m.drawMatches(out, out_good)
 
         print("Calculate matches...")
-
         space = spaceIntersection.spaceIntersect(db,im1,im2)
-        space.getGeoLocation(matches, pts1, pts2)
+        space.getGeoLocation(matches, pts1, pts2, des1, des2)
 
-    print("done")
+
+
+
+    print('done')
 
 
 

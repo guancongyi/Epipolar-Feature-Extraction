@@ -17,18 +17,18 @@ class rectification():
 
 
     def getEpipolarImage(self, src):
-        r, c = src.shape[:2]
-        (r_dst, c_dst) = self.getResultImgSize((r,c))
+        r_src, c_src = src.shape[:2]
+        r_dst, c_dst = self.getResultImgSize((r_src,c_src))
         dst = np.zeros((r_dst, c_dst, 3), np.uint8)
         # resample
         for i in range(0, r_dst):
             for j in range(0, c_dst):
-                (du, dv) = self.pixToDist((r_dst/2, c_dst/2), (i, j), (0,0))
-                (dx, dy) = self.uvToXy(du, dv)
-                x, y = self.distToPix((r/2, c/2),(dx,dy),(self.cx,self.cy))
-                if (x >= 0 and y >= 0) and (x < r and y < c):
-                    # print(i)
-                    dst[i, j] = src[x, y, :]
+                du, dv = self.pixToDist((c_dst/2, r_dst/2), (j, i), (0,0))
+                dx, dy = self.uvToXy(du, dv)
+                x, y = self.distToPix((c_src/2, r_src/2),(dx,dy),(self.cx,self.cy))
+                if (x >= 0 and y >= 0) and (y < r_src and x < c_src):
+                    #print(i)
+                    dst[i, j] = src[y, x, :]
 
         return dst
 
@@ -39,10 +39,10 @@ class rectification():
     # estimating the original image's corners
     def getResultImgSize(self, size):
         r, c = size
-        x1, y1 = self.pixToDist((r / 2, c / 2), (0, 0), (self.cx, self.cy))
-        x2, y2 = self.pixToDist((r / 2, c / 2), (r, c), (self.cx, self.cy))
-        x3, y3 = self.pixToDist((r / 2, c / 2), (0, c), (self.cx, self.cy))
-        x4, y4 = self.pixToDist((r / 2, c / 2), (r, 0), (self.cx, self.cy))
+        x1, y1 = self.pixToDist((c / 2, r / 2), (0, 0), (self.cx, self.cy))
+        x2, y2 = self.pixToDist((c / 2, r / 2), (c, r), (self.cx, self.cy))
+        x3, y3 = self.pixToDist((c / 2, r / 2), (0, r), (self.cx, self.cy))
+        x4, y4 = self.pixToDist((c / 2, r / 2), (c, 0), (self.cx, self.cy))
 
         # top left , bottom right, and ...
         u1, v1 = self.xyToUv(x1, y1)
@@ -69,10 +69,10 @@ class rectification():
         dv = max(vs)-min(vs)
 
         # Base on du dv, calculate the size of the desire output
-        u = int(du/self.miu)
-        v = int(dv/self.miu)
+        u = int(du/self.miu) # c
+        v = int(dv/self.miu) # r
 
-        return u, v
+        return v, u
 
     # function that convert u,v in parallel coordinate system to xy
     # in orginal coordinate system based on extrinsic parameters.
@@ -97,14 +97,14 @@ class rectification():
         mx, my = center
         x, y = xy
         cx, cy = cxy
-        return (mx - x) * self.miu + cx, (my - y) * self.miu + cy
+        return (x-mx) * self.miu + cx, (y-my) * self.miu + cy
 
     # On the other hand
     def distToPix(self, center, dxy, cxy):
         dx, dy = dxy
         mx, my = center
         cx, cy = cxy
-        return int(mx-((dx-cx)/self.miu)), int(my-((dy-cy)/self.miu))
+        return int(mx+((dx-cx)/self.miu)), int(my+((dy-cy)/self.miu))
 
 
 if __name__ == '__main__':
