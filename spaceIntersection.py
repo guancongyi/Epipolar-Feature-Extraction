@@ -15,14 +15,18 @@ class spaceIntersect():
         Xs1, Ys1, Zs1 = XYZ1s
         cx2, cy2, f2, R2, XYZ2s, _, miu2 = self.db.getInfo(self.name2)
         Xs2, Ys2, Zs2 = XYZ2s
+        R2 = np.zeros((3,3))
+        R1 = R2
 
         for match in matches:
             pt1 = pts1[match.queryIdx].pt
             pt2 = pts2[match.trainIdx].pt
             des1 = dess1[match.queryIdx]
             des2 = dess2[match.trainIdx]
-            x1, y1 = self.pix2Dist(miu1, int(self.im1.shape[1] / 2), int(self.im1.shape[0] / 2), pt1[1], pt1[0])
-            x2, y2 = self.pix2Dist(miu2, int(self.im2.shape[1] / 2), int(self.im2.shape[0] / 2), pt2[1], pt2[0])
+            x1, y1 = self.pix2Dist(miu1, self.im1.shape[1] / 2, self.im1.shape[0] / 2, pt1[1], pt1[0])
+            x2, y2 = self.pix2Dist(miu2, self.im2.shape[1] / 2, self.im2.shape[0] / 2, pt2[1], pt2[0])
+            temp = np.dot(R1,np.array([[x1],[y1],[-f1]]))
+            temp += np.array([[Xs1],[Ys1],[Zs1]])
             l11 = f1 * R1[0][0] + (x1-cx1) * R1[0][2] # l1
             l12 = f2 * R2[0][0] + (x2-cx2) * R2[0][2] # l1 for right image
             l21 = f1 * R1[1][0] + (x1-cx1) * R1[1][2] # l2
